@@ -8,6 +8,9 @@ import sys
 
 
 class timestamp:
+    """
+    A timestamp in the format mm:ss:ff (minutes seconds frames).
+    """
     def __init__(self, minutes: int, seconds: int, frames: int = 0):
         if minutes < 0 or minutes > 99:
             print("ERROR: timestamp minutes must be between 0 and 99")
@@ -29,15 +32,26 @@ class timestamp:
     
     
 class song:
+    """
+    A song with a timestamp, title, and author.
+    """
     def __init__(self, timestamp: timestamp, title: str, author: str):
         self.timestamp = timestamp
         self.title = title
         self.author = author
         
 
-def parse_comment(comment: str, first_sep: str, second_sep: str, author_before_title: bool = False) -> list[song]:
+def parse_timestamps(timestamps: str, first_sep: str, second_sep: str, author_before_title: bool = False) -> list[song]:
+    """
+    Parse a string containing song timestamps into a list of song objects.
+    
+    :param timestamps: Input timestamp string, where each line is one song
+    :param first_sep: Separator between timestamp and first item (title or author)
+    :param second_set: Separator between first and second item (title and author, or vice versa)
+    :param author_before_title: Whether the author appears before the title on each line. If left false, title appears before author on each line.
+    """
     songs = []
-    for line in comment.splitlines():
+    for line in timestamps.splitlines():
         # skip this line if it is empty
         if line.strip() == "":
             continue
@@ -74,7 +88,13 @@ def parse_comment(comment: str, first_sep: str, second_sep: str, author_before_t
         songs.append(s)
     return songs
 
-def print_tracks(songs: list[song], file=None):
+def print_tracks_as_cuesheet(songs: list[song], file=None):
+    """
+    Print a list of tracks in a Cuesheet format.
+    
+    :param songs: A list of song objects
+    :param file: Output file to print to. If None, will print to stdout.
+    """
     for num, track in enumerate(songs):
         # always print which track number this is, and the title
         print(f"\tTRACK {(num + 1):02d} AUDIO", file=file)
@@ -88,6 +108,7 @@ def print_tracks(songs: list[song], file=None):
         print(f"\t\tINDEX 01 {track.timestamp}", file=file)
 
 def main():
+    # set up parser with all the options we need
     parser = argparse.ArgumentParser(description="Parse a YouTube comment to a .cue track list, where each line of the comment holds a timestamp, song title, and author")
     parser.add_argument("first_sep", help="Separator between first and second parts of line (eg \" \" or \"-\")")
     parser.add_argument("second_sep", help="Separator between second and third parts of line (eg \"-\" or \"by\")")
@@ -95,23 +116,30 @@ def main():
     parser.add_argument("-o", "--outfile", help="If used, append track list to this file. Otherwise, print to stdout.")
     parser.add_argument("-r", "--reverse-order", action="store_true", help="If enabled, expect lines of the form {timestamp} {author} {title}. Otherwise, expect to {timestamp} {title} {author}")
 
+    # attempt to parse args (if invalid args were provided, will print a help message)
     args = parser.parse_args()
     
+    # open the input file if one was provided
     if args.infile:
         infile = open(args.infile, "r")
     else:
         infile = sys.stdin
         print("copy+paste comment below, then press Ctrl+D")
         
-    comment = infile.read()
+    # read the contents of the infile into one big string
+    timestamps = infile.read()
     infile.close()
     
-    songs = parse_comment(comment, args.first_sep, args.second_sep, author_before_title=args.reverse_order)
+    # parse the timestamps from that string into a list of songs
+    songs = parse_timestamps(timestamps, args.first_sep, args.second_sep, author_before_title=args.reverse_order)
+    
+    # print those songs to the output file as a list of Cuesheet tracks
     if args.outfile:
         with open(args.outfile, "a") as outfile:
-            print_tracks(songs, file=outfile)    
+            print_tracks_as_cuesheet(songs, file=outfile)    
     else:
-        print_tracks(songs)
+        print_tracks_as_cuesheet(songs)
+    
     
 if __name__ == "__main__":
     main()
